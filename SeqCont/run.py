@@ -5,8 +5,6 @@ import time
 import signal
 import queue
 
-
-
 TWO_GATE_MODE = False
 
 #logger = util.logging.getLogger("MyApp.main") 
@@ -17,15 +15,18 @@ def initialize_system():
     interface_cont = interface.IFCont()
     initialize_IF(interface_cont,recv_msg_queue)
     ety_gate_ctrl,exit_gate_ctrl = initialize_SysContext()
-    interface_cont.send_uart_cmd(ety_gate_ctrl,util.CMD_AVAILABLE_COUNT,0)
-    
+    interface_cont.send_payload(util.COMM_FOR_STM32,ety_gate_ctrl,util.CMD_RESET)
+    # stm32 booting time 
+    time.sleep(0.3)
+    interface_cont.send_payload(util.COMM_FOR_STM32,ety_gate_ctrl,util.CMD_AVAILABLE_COUNT)
+
     return recv_msg_queue,interface_cont,ety_gate_ctrl, exit_gate_ctrl
 
 def initialize_IF(IFCont,cmd_queue):
     TOPIC_LIST = [util.MQTT_TOPIC_RESPONSE_OCR,util.MQTT_TOPIC_RESPONSE_FEE_INFO,util.MQTT_TOPIC_RESPONSE_FEE_RESULT]
     # mqtt thread, uart thread start! -
     IFCont.set_uart_setting(port = util.UART_PORT,baudrate = util.UART_BAUDRATE,queue = cmd_queue)
-    IFCont.set_mqtt_setting(bk_addr = util.MQTT_BROKER_ADDRESS,bk_port = util.MQTT_BROKER_PORT,topics = TOPIC_LIST,client_id = util.MQTT_CLIENT_ID,queue =recv_msg_queue)
+    IFCont.set_mqtt_setting(bk_addr = util.MQTT_BROKER_ADDRESS,bk_port = util.MQTT_BROKER_PORT,topics = TOPIC_LIST,client_id = util.MQTT_CLIENT_ID,queue =cmd_queue)
     IFCont.init_interface()
     
 
@@ -56,6 +57,7 @@ def cleanup_system(interface_cont):
     print("--- [CLEANUP END] ---")
 
 def run():
+    interface_cont = None
     try:
         recv_msg_queue, interface_cont,ety_gate_ctrl, exit_gate_ctrl = initialize_system()
         while True:
@@ -73,9 +75,14 @@ def run():
                 time.sleep(0.5) 
     except Exception as e:
         print(f"Error Occured : {e}")
-        cleanup_system(interface_cont)
-        time.sleep(5)   
+        if (interface_cont is not None) :
+            cleanup_system(interface_cont)                
+
 
 
 if __name__ == "__main__":
-    run()    
+    while(True):
+        #if occured Exception, retry;
+        run()
+        print("[SYS][ERROR][RESTART]")
+        time.sleep(5)

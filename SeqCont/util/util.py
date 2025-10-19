@@ -28,12 +28,13 @@ def pack_payload(dest ,topic ,payload):
 retry_cnt = 0
 def retry(max_retry_count = 3) -> bool:
     global retry_cnt
-    time.sleep(50)
+    time.sleep(1)
+
     if retry_cnt > max_retry_count:
         retry_clear()
         return True
     else :
-        print(f"재시도 중... ({retry_cnt + 1})")
+        print(f"Retry...({retry_cnt + 1})")
         retry_cnt += 1
         return False
 def retry_clear():
@@ -170,13 +171,13 @@ class GateCtrl:
 
         if self.gate_state.get_gate_ID() is None:
             return False
-        log_context = "[CON]"
+        log_context = "[JETSON]"
 
         if self._state == util.JN_STARTUP :
             # license_plate_tmp is Camera data (byte)
 
             log_context += "[STARTUP]"
-            IFCtrl.send_payload(util.COMM_FOR_SERVER,self,util.CMD_AVAILABLE_COUNT)
+            IFCtrl.send_payload(util.COMM_FOR_STM32,self,util.CMD_AVAILABLE_COUNT)
             time.sleep(1) 
             # payload = self.uart_make_frame(11,util.MSG_TYPE_COMMAND,util.CMD_AVAILABLE_COUNT, 10)
             # self.send_payload(util.COMM_FOR_STM32,util.CMD_AVAILABLE_COUNT,payload)
@@ -206,7 +207,7 @@ class GateCtrl:
                 else:
                     # car entry 
                     # send gate open command
-                    IFCtrl.send_payload(util.COMM_FOR_SERVER,self,util.CMD_GATE_OPEN)
+                    IFCtrl.send_payload(util.COMM_FOR_STM32,self,util.CMD_GATE_OPEN)
 
             # OCR Fail Case
             elif self._state == util.JN_OCR_NG:
@@ -217,8 +218,11 @@ class GateCtrl:
                     self._state = util.JN_IDLE
                     # IFCtrl.send_payload(util.COMM_FOR_STM32,self,util.CMD_RESET)
                 else : 
+                    log_context += "[JN_OCR_REQUESTED]"
+                    IFCtrl.send_payload(util.COMM_FOR_SERVER,self,util.CMD_OCR_RESULT_REQUEST)
+                    # self._state.car_detect_flg = False
                     self._state = util.JN_OCR_REQUESTED
-                    IFCtrl.send_payload(util.COMM_FOR_SERVER,self,util.JN_OCR_REQUESTED)
+
                     
             if self._state == util.JN_PAYMENT:
                 # car_info_data should send by payload to stm32
@@ -235,19 +239,19 @@ class GateCtrl:
                 self.gate_state.exit_car()
             # set timer 2sec 
             log_context += "[TIM_START]"
-
-            if (result_timer(1)) : 
-                log_context += "[JN_CLOSED]"
-                IFCtrl.send_payload(util.COMM_FOR_STM32,self,util.CMD_GATE_CLOSE)
-                self._state = util.JN_IDLE
+            # AFTERO TIM START, IF CMD DONT COME HERE, YOU DONT CLOSE THE DOOR
+            # if (result_timer(1)) : 
+            log_context += "[JN_CLOSED]"
+            IFCtrl.send_payload(util.COMM_FOR_STM32,self,util.CMD_GATE_CLOSE)
+            self._state = util.JN_IDLE
 
 
         # 5. Error_handler, 
         # 치명적인 error 일 경우 시스템 리셋
         # 그게 아닐 경우 자체 해결
         _tmp_available_state = self.gate_state.get_available_count()
-        IFCtrl.error_handler.chk_err(IFCtrl)
-        if log_context != "[CON]":
+        IFCtrl.error_handler.chk_error(IFCtrl)
+        if log_context != "[JETSON]":
             print(log_context)
             print(self)
             print("------------SEQ_END------------")

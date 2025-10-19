@@ -6,7 +6,7 @@ COMM_FOR_STM32                              = 0x91
 
 
 #3.CONSTANT - MQTT
-MQTT_BROKER_ADDRESS                         = "172.30.1.88"
+MQTT_BROKER_ADDRESS                         = "172.30.1.35"
 # MQTT_BROKER_ADDRESS                         = "220.86.83.94"  
 MQTT_BROKER_PORT                            = 1883
 MQTT_CLIENT_ID                              = "MQTT-Receiver-Client"
@@ -16,8 +16,6 @@ MQTT_TOPIC_REQUEST_FEE_INFO                 = "parking/request/feeInfo"
 MQTT_TOPIC_RESPONSE_OCR                     = "parking/response/ocr"
 MQTT_TOPIC_RESPONSE_FEE_INFO                = "parking/response/feeInfo"
 MQTT_TOPIC_RESPONSE_FEE_RESULT                = "parking/response/feeResult"
-
-# MQTT_BROKER_ADDRESS_TMP                     = "3.36.115.7"  
 
 INIT_AVAILABLE_COUN = 10
 #3.CONSTANT - UART
@@ -45,6 +43,7 @@ CMD_OCR_RESULT_REQUEST                      = 0x40
 CMD_PAYMENT_INFO_REUQEST                    = 0x41
 CMD_PAYMENT_RESULT                          = 0x42
 CMD_DISPLAY_ERROR_CODE                      = 0x43
+
 #3.CONSTANT - UART STATUS TYPE
 STATUS_SYSTEM_CONNECT                       = 0x19# 시스템 대기 중
 STATUS_SYSTEM_IDLE                          = 0x20# 시스템 대기 중

@@ -20,8 +20,12 @@ class cameraModule:
     "nvvidconv ! "
     "video/x-raw(format=BGRx, width=640, height=480) ! "
     "videoconvert ! "
+    "videoflip method=clockwise !"
+    "video/x-raw, format=BGR ! "
     "appsink"
     )
+
+
 
 
     def __init__(self, camera_index=0):
@@ -30,14 +34,15 @@ class cameraModule:
         :param camera_index: 카메라 장치 인덱스 (일반적으로 0)
         """
         self.camera_index = camera_index
-        
     def init_camera(self):
-        self.cap = cv2.VideoCapture(self.gstreamer_pipeline, cv2.CAP_GSTREAMER)
-        if not self.cap.isOpened():
-            print(f"Error: 카메라 장치({self.camera_index})를 열 수 없습니다.")
-        else:
-            print(f"카메라 장치({self.camera_index})가 성공적으로 열렸습니다.")
-
+        try:
+            self.cap = cv2.VideoCapture(self.gstreamer_pipeline, cv2.CAP_GSTREAMER)
+            if not self.cap.isOpened():
+                print(f"Error: 카메라 장치({self.camera_index})를 열 수 없습니다.")
+            else:
+                print(f"카메라 장치({self.camera_index})가 성공적으로 열렸습니다.")
+        except Exception as e:
+            print("camera Error : {e}")
     def get_camera_idx(self):
         return self.camera_index
     def capture_images(self, num_images=1):
@@ -48,6 +53,7 @@ class cameraModule:
         :param num_images: 캡처할 이미지 수
         :return: base64 인코딩된 이미지 문자열 리스트
         """
+        encoded_string = None
         if not self.cap.isOpened():
             print("카메라가 준비되지 않았습니다.")
             return False
@@ -58,10 +64,8 @@ class cameraModule:
             if is_success:
                 encoded_string = base64.b64encode(buffer).decode("utf-8")
                 # print(f"  - {i+1}번째 이미지 인코딩 완료.")
-            else:
-                print(f"Error: {i+1}번째 이미지 인코딩 실패.")
-        else:
-            print(f"Error: {i+1}번째 이미지 캡처 실패.")
+            else :
+                return False
         # 연속 촬영 시 약간의 딜레이 추가
         time.sleep(0.5)
 

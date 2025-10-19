@@ -9,7 +9,6 @@ def parse_mqtt_msg(sys_ctrl,received_msg):
     topic = received_msg.get("topic")
     msg_data = received_msg.get("payload")
     status_str = "[SERVER]"
-
     if topic == util.MQTT_TOPIC_RESPONSE_OCR and sys_ctrl._state == util.JN_OCR_REQUESTED:
         if msg_data["success"]:
             sys_ctrl.set_cur_status(util.JN_OCR_OK)
@@ -69,7 +68,7 @@ def parse_uart_msg(sys_ctrl,received_payload):
                 status_str += "[STATUS_VEHICLE_PASSED]"    
                 sys_ctrl.gate_state.set_state_car_left()
             elif status_type == util.STATUS_ERROR_CODE:
-                sys_ctrl.error_handler.set_error_code(msg_data["error_code"])
+                # sys_ctrl.error_handler.set_error_code(msg_data["error_code"])
                 sys_ctrl.set_cur_status(util.STATUS_ERROR_CODE)
             else : 
                 print(f"Can't find status list state: {status_type}")
@@ -104,8 +103,10 @@ class PayloadCont:
     def __init__(self):
         self.camera_module = sensorModule.cameraModule()
         self.camera_module.init_camera()
+
     def make_payload(self,sys_context,p_type):
-        print(f"PAYLOAD MAKE START")
+        if util.DEBUG_FLAG:
+            print(f"PAYLOAD MAKE START")
         payload = {}
         union_data ={}
         gate_id = sys_context.gate_state.get_gate_ID()
@@ -141,8 +142,9 @@ class PayloadCont:
         payload["cmd_type"] = p_type
         payload["gate_id"] = gate_id
         payload["union_data"] = union_data
-        if p_type != util.CMD_OCR_RESULT_REQUEST:
-            print(f"PAYLOAD MAKE DONE! \nPAYLOAD : {payload}")
+        if util.DEBUG_FLAG:
+            if p_type != util.CMD_OCR_RESULT_REQUEST:
+                print(f"PAYLOAD MAKE DONE! \nPAYLOAD : {payload}")
 
         return payload
 
@@ -165,7 +167,7 @@ class ErrorHandler:
         return self.error_code
 
     def chk_error(self,IFCtrl):
-        if not len(self._error_flg) :
+        if not self._error_flg :
             return False
         # 인터페이스 연결 문제
         # uart 문제, 껏다가 다시 연결
@@ -173,36 +175,37 @@ class ErrorHandler:
         # 일단은 이렇게 세개 정도 ???
         
         ret = False
-        while(len(self._error_code)):
-            error_code = self._error_code.pop(0)
-            # uart err
-            if error_code >= 0x70 and error_code <= 0x80:
-                if error_code == 0x70 :
-                    # stm32 sys reset
-                    # stm32 only one reset but mqtt is three reset? 
-                    # payload = self.IFCtrl.uart_make_frame(util.MSG_TYPE_COMMAND,util.CMD_RESET,None)
-                    IFCtrl.send_payload(util.COMM_FOR_STM32,self,util.CMD_RESET)
-                    IFCtrl.init_interface()
-                elif error_code == 0x81:
+        # while(len(self._error_code)):
+        #     error_code = self._error_code.pop(0)
+        #     # uart err
+        #     if error_code >= 0x70 and error_code <= 0x80:
+        #         if error_code == 0x70 :
+        #             # stm32 sys reset
+        #             # stm32 only one reset but mqtt is three reset? 
+        #             # payload = self.IFCtrl.uart_make_frame(util.MSG_TYPE_COMMAND,util.CMD_RESET,None)
+        #             print("ERROR")
+        #             IFCtrl.send_payload(util.COMM_FOR_STM32,self,util.CMD_RESET)
+        #             IFCtrl.init_interface()
+        #         elif error_code == 0x81:
                     
-                    pass
-                    # ret = retry(self.IFCtrl.init_interface())
+        #             pass
+        #             # ret = retry(self.IFCtrl.init_interface())
 
-                elif error_code == 0x82:
-                    pass
-                    # ret = retry(self.IFCtrl.init_interface())
-            # mqtt err
-            elif error_code >= 0x80:
-                # mqtt connect error
-                pass
-                if error_code  == 0x81 :
-                    pass
-                    # ret = retry(self.IFCtrl.init_interface())
-            if ret : 
-                self.clear()
-            else :
-                # SYSTEM RESET
-                IFCtrl.send_payload(util.COMM_FOR_STM32,self,util.CMD_RESET)
+        #         elif error_code == 0x82:
+        #             pass
+        #             # ret = retry(self.IFCtrl.init_interface())
+        #     # mqtt err
+        #     elif error_code >= 0x80:
+        #         # mqtt connect error
+        #         pass
+        #         if error_code  == 0x81 :
+        #             pass
+        #             # ret = retry(self.IFCtrl.init_interface())
+        #     if ret : 
+        #         self.clear()
+        #     else :
+        #         # SYSTEM RESET
+        #         IFCtrl.send_payload(util.COMM_FOR_STM32,self,util.CMD_RESET)
 
     def clear(self):
         self.error_code = ""
@@ -212,7 +215,8 @@ class IFCont:
     def __init__(self):
         self.mqtt_ctrl = None
         self.uart_ctrl = None
-        self.payload_cont     = PayloadCont()
+        self.payload_cont = PayloadCont()
+
         self.error_handler = ErrorHandler()
 
     def confirm_connection(self):
@@ -230,9 +234,9 @@ class IFCont:
     def set_mqtt_setting(self, bk_addr, bk_port, topics, client_id, queue):
         self.mqtt_ctrl = interface.MqttModule(
                                     bk_addr = bk_addr,
-                                    bk_port = util.MQTT_BROKER_PORT,
+                                    bk_port = bk_port,
                                     topics = topics,
-                                    client_id = util.MQTT_CLIENT_ID,
+                                    client_id = client_id,
                                     queue = queue
                                     )
     def set_uart_setting(self, port, baudrate, queue, timeout = 1):
@@ -251,12 +255,13 @@ class IFCont:
     def send_payload(self,destination,gate_ctrl,cmd_type):
         if destination == util.COMM_FOR_STM32:
             payload = self.uart_make_frame(util.MSG_TYPE_COMMAND,self.payload_cont.make_payload(gate_ctrl,cmd_type))
-            print(f"[SEND_MSG][STM32][MSG_TYPE][PAYLOAD] -> [{cmd_type}] : [{payload}]") 
+            if util.DEBUG_FLAG:
+                print(f"[SEND_MSG][STM32][MSG_TYPE][PAYLOAD] -> [{cmd_type}] : [{payload}]") 
             #logger.info(f"[SEND_MSG][STM32][MSG_TYPE][PAYLOAD] -> [{cmd_type}] : [{payload}]") 
             self.uart_ctrl.uart_send_payload(payload)
 
-        elif destination == util.COMM_FOR_STM32:
-            mqtt_payload = self.payload_cont.make_payload(self,util.CMD_OCR_RESULT_REQUEST)
+        elif destination == util.COMM_FOR_SERVER:
+            mqtt_payload = self.payload_cont.make_payload(gate_ctrl,util.CMD_OCR_RESULT_REQUEST)['union_data']
             if cmd_type == util.CMD_OCR_RESULT_REQUEST : 
                 #logger.info("[SEND_MSG][SERVER][CMD_OCR_RESULT_REQUEST] ->") 
                 return self.mqtt_ctrl.mqtt_publish(util.MQTT_TOPIC_REQUEST_OCR, mqtt_payload)
@@ -292,8 +297,8 @@ class IFCont:
             pass
 
         self.uart_set_struct_data()
-
-        print(f"SUCCESS PACKING FOR UART STRUCT -> {self._data}")
+        if util.DEBUG_FLAG:
+            print(f"SUCCESS PACKING FOR UART STRUCT -> {self._data}")
 
         return self._data   
     
@@ -322,6 +327,8 @@ class IFCont:
     # def send_cmd_reset(self,payload):
 
     def stop_interface(self):
+        print(f"STOP IF ")
+
         self.error_handler.clear()
         self.mqtt_ctrl.disconnect()
         self.mqtt_ctrl.loop_stop()
@@ -329,5 +336,6 @@ class IFCont:
         self.uart_ctrl.join()
         
     def __del__(self):
+
         # 객체가 삭제될 때 자동으로 호출됩니다.
         print(f"IFController is Deleted")

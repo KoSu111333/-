@@ -36,6 +36,7 @@ class MqttModule:
         else:
             self._is_connected = False
             #logger.exception(f"[MQTT] MQTT 연결 실패: Error Code {rc}")
+            print("[MQTT] MQTT 연결 실패")
 
     def _on_message(self, client, userdata, msg):
         try:
@@ -57,6 +58,7 @@ class MqttModule:
         except Exception as e:
             #logger.exception(f"[MQTT] MQTT 메시지 처리 오류: {e}")
             print(f"[MQTT] MQTT 메시지 처리 오류: {e}")
+
     def _create_mqtt_client(self):
         mqtt_client = mqtt.Client(client_id=self.client_id)
         return mqtt_client
@@ -73,8 +75,7 @@ class MqttModule:
         if not self._is_connected:
             #logger.exception(f"Error: {timeout}초 이내에 MQTT 브로커에 연결하지 못했습니다.")
             print("MQTT connection timeout")
-
-            # raise RuntimeError("MQTT connection timeout")
+            raise RuntimeError("MQTT connection timeout")
             
     def mqtt_send_raw_data(self, topic,raw_data):
         json_data = json.dumps(raw_data)
