@@ -1,10 +1,14 @@
 import util
 import time
+import threading
 
 tim     =  None
+    
+    
 def set_timer(sec):
     global tim
-    tim = time.monotonic() + sec
+    tim = time.monotonic() + sec    
+
 def result_timer(sec):
     global tim
     if tim is None : 
@@ -19,7 +23,7 @@ def result_timer(sec):
     
 # how to re-connect mqtt or uart;
 def pack_payload(dest ,topic ,payload):
-    return {"dest"       : dest,"topic"      : topic,"payload"    : payload}
+    return {"topic"      : topic,"payload"    : payload}
 
 
 # 함수 자체에 대한 반복, 근데 이걸 테스크로 해야할 것 같은게 이거 하다가 값이 오면 어캄?
@@ -28,60 +32,18 @@ def pack_payload(dest ,topic ,payload):
 retry_cnt = 0
 def retry(max_retry_count = 3) -> bool:
     global retry_cnt
-    time.sleep(50)
-    if retry_cnt > max_retry_count:
+    time.sleep(1)
+
+    if retry_cnt >= max_retry_count:
         retry_clear()
         return True
     else :
-        print(f"재시도 중... ({retry_cnt + 1})")
+        print(f"Retry...({retry_cnt + 1})")
         retry_cnt += 1
         return False
 def retry_clear():
     global retry_cnt
     retry_cnt = 0
-    
-# car info for paying the fee 
-class CarInfo:
-    def __init__(self):
-        self.license_plate = None
-        self.entry_time = None
-        self.exit_time = None
-        self.fee = None
-        self.is_paid = None
-        self.discount_applied = None
-    
-    # 클래스 메서드로 정의하여 인스턴스를 직접 생성하고 반환
-    @classmethod
-    def from_dict(cls, car_dict):
-        car = cls() # CarInfo 인스턴스 생성
-        for key, value in car_dict.items():
-            if hasattr(car, key):
-                setattr(car, key, value)
-        return car
-
-    # 인스턴스 메서드로 정의하여 현재 인스턴스에 값을 설정
-    def set_car_info(self, car_dict):
-        for key, value in car_dict.items():
-            if hasattr(self, key):
-                setattr(self, key, value)
-
-    def get_car_info(self):
-        car_dict = {}
-        # 클래스의 모든 속성을 순회하며 None이 아닌 값만 추가
-        for key, value in self.__dict__.items():
-            if value is not None:
-                car_dict[key] = value
-        return car_dict
-
-
-    def clear(self):
-        self.license_plate = None
-        self.entry_time = None
-        self.exit_time = None
-        self.fee = None
-        self.is_paid = None
-        self.discount_applied = None
-
 
 class gateStatus:
     def __init__(self):
@@ -110,6 +72,11 @@ class gateStatus:
         self.cur_available_count += 1
     def exit_car(self):
         self.cur_available_count -= 1
+    def is_full_garage(self):
+        if self.cur_available_count == util.INIT_AVAILABLE_COUNT: 
+            return True
+        else:
+            return False
     def get_available_count(self):
         return self.cur_available_count
     def is_cur_detected_car(self):
@@ -149,113 +116,82 @@ class gateStatus:
         self._gate_id = None
         self.cur_available_count = util.INIT_AVAILABLE_COUNT
 
-_tmp_available_state = None
 class GateCtrl:
-    def __init__(self):
+    def __init__(self,gate_id):
         # IDLE, READY, BUSY
-        self._state           = util.JN_STARTUP
-        self.gate_state       = gateStatus()
-        self.car_info         = CarInfo()
+        # self.gate_state       = gateStatus()
+        self._gate_id = gate_id
+        
+        self.uart_payload = None
+        self.mqtt_payload = None
+        
+        self._uart_cond  = threading.Condition() 
+        self._mqtt_cond  = threading.Condition() 
+    @property       
+    def mqtt_payload(self):
+        return self._mqtt_payload
 
-    def set_cur_status(self,state):
-        self._state = state
-
-    def is_busy(self):
-        return not self._state == util.JN_IDLE
-
-    def mange_context(self,IFCtrl):
-        # 2. car detect request        
-        print("-------------SEQ_START-------------")
-        global _tmp_available_state
-
-        if self.gate_state.get_gate_ID() is None:
-            return False
-        log_context = "[CON]"
-
-        if self._state == util.JN_STARTUP :
-            # license_plate_tmp is Camera data (byte)
-
-            log_context += "[STARTUP]"
-            IFCtrl.send_payload(util.COMM_FOR_SERVER,self,util.CMD_AVAILABLE_COUNT)
-            time.sleep(1) 
-            # payload = self.uart_make_frame(11,util.MSG_TYPE_COMMAND,util.CMD_AVAILABLE_COUNT, 10)
-            # self.send_payload(util.COMM_FOR_STM32,util.CMD_AVAILABLE_COUNT,payload)
-
-            # time.sleep(1) 
-            self.set_cur_status(util.JN_IDLE)
-        if self._state == util.JN_IDLE and _tmp_available_state != self.gate_state.get_available_count():
-            # 현재 가용한 주차장 수 표시 
-            IFCtrl.send_payload(util.COMM_FOR_SERVER,self,self.gate_state)
+    @mqtt_payload.setter 
+    def mqtt_payload(self, payload):
+        self._mqtt_payload = payload
             
-        if self.gate_state.is_cur_detected_car(): 
-            # 4. Payment_hanlder 
-            if self._state == util.JN_IDLE:
-                log_context += "[CARDETECT]"
-                # license_plate_tmp is Camera data (byte)
-                IFCtrl.send_payload(util.COMM_FOR_SERVER,self,util.CMD_OCR_RESULT_REQUEST)
-                # self._state.car_detect_flg = False
-                self._state = util.JN_OCR_REQUESTED
+    @property
+    def uart_payload(self):
+        return self._uart_payload
 
-            # 3. OCR result
-            if self._state == util.JN_OCR_OK:
-                # get_cur_direction() return == False is Exit
-                log_context += "[JN_OCR_OK]"
-                if self.gate_state.get_cur_direction() == False:
-                    IFCtrl.send_payload(util.COMM_FOR_SERVER,self,util.CMD_PAYMENT_INFO_REUQEST)
-                    self.set_cur_status(util.JN_CAR_INFO_REQUEST)
-                else:
-                    # car entry 
-                    # send gate open command
-                    IFCtrl.send_payload(util.COMM_FOR_SERVER,self,util.CMD_GATE_OPEN)
+    @uart_payload.setter
+    def uart_payload(self, payload):
+        self._uart_payload = payload
+    def gate_id(self):
+        return self._gate_id
+    def is_ocr_ok(self):
+        return self.mqtt_payload["success"] == True
+    def get_cur_uart_cond(self):
+        return self._uart_cond
+    def get_cur_mqtt_cond(self):
+        return self._mqtt_cond
+    def start_up(self,IF_Cont):
+        # Server Init 
+        # uart Init
+        IF_Cont.send_payload(util.COMM_FOR_SERVER ,self, util.JN_STARTUP)
+        if not IF_Cont.wait_for_mqtt_status(util.MQTT_TOPIC_RESPONSE_STARTUP,self.gate_id()):
+            return False
 
-            # OCR Fail Case
-            elif self._state == util.JN_OCR_NG:
-                log_context += "[JN_OCR_NG]"
-                # true is success
-                # false is Fail 
-                if (retry()):
-                    self._state = util.JN_IDLE
-                    # IFCtrl.send_payload(util.COMM_FOR_STM32,self,util.CMD_RESET)
-                else : 
-                    self._state = util.JN_OCR_REQUESTED
-                    IFCtrl.send_payload(util.COMM_FOR_SERVER,self,util.JN_OCR_REQUESTED)
-                    
-            if self._state == util.JN_PAYMENT:
-                # car_info_data should send by payload to stm32
-                log_context += "[JN_PAYMENT]"
-                payload = IFCtrl.uart_make_frame(util.MSG_TYPE_COMMAND,self.payload_cont.make_payload(self,util.CMD_DISPLAY_PAYMENT_INFO))
-                IFCtrl.send_payload(util.COMM_FOR_STM32,util.CMD_DISPLAY_PAYMENT_INFO,payload)
+        # uart Init
+        if not IF_Cont.wait_for_uart_status(util.STATUS_SYSTEM_CONNECT,self.gate_id()):
+            return False
+        IF_Cont.send_payload(util.COMM_FOR_STM32 ,self, util.CMD_AVAILABLE_COUNT)
+    def payment_process(self,IF_Cont):
+        IF_Cont.send_payload(util.COMM_FOR_SERVER ,self, util.CMD_PAYMENT_INFO_REUQEST)
+        IF_Cont.wait_for_mqtt_response(util.MQTT_TOPIC_RESPONSE_OCR,self.gate_id())
+        IF_Cont.send_payload(util.COMM_FOR_STM32 ,self, util.CMD_DISPLAY_PAYMENT_INFO)
+        print("5. [ACTION] Gate OPEN 커맨드 전송 완료.")
+        time.sleep(1) 
+        # 5. Uart로 게이트 OPEN 커맨드 전송
+        self.gate_open(self)
+        IF_Cont.wait_for_uart_status(util.STATUS_VEHICLE_PASSED,self.gate_id())
+        self.gate_close(self)           
+        print("6. [ACTION] Gate CLOSE 커맨드 전송 완료.")
 
-        # JN_CLOSE
-        if not self.gate_state.is_closed() and not self.gate_state.is_cur_detected_car():
-            if self._state == util.JN_OCR_OK :
-                self.gate_state.entry_car()
-                
-            elif self._state == util.JN_PAYMENT_DONE :
-                self.gate_state.exit_car()
-            # set timer 2sec 
-            log_context += "[TIM_START]"
+    def gate_open(self,IF_Cont):
+        # 5. Uart로 게이트 OPEN 커맨드 전송
+        IF_Cont.send_payload(util.COMM_FOR_STM32 ,self, util.CMD_GATE_OPEN)
 
-            if (result_timer(1)) : 
-                log_context += "[JN_CLOSED]"
-                IFCtrl.send_payload(util.COMM_FOR_STM32,self,util.CMD_GATE_CLOSE)
-                self._state = util.JN_IDLE
+    def gate_close(self,IF_Cont):
+        IF_Cont.send_payload(util.COMM_FOR_STM32 ,self, util.CMD_GATE_CLOSE)
+        time.sleep(0.5) 
+        self.send_payload(util.COMM_FOR_STM32 ,self, util.CMD_AVAILABLE_COUNT)
+        
+    def ocr_request(self,IF_Cont):
+        IF_Cont.send_payload(util.COMM_FOR_SERVER ,self, util.CMD_OCR_RESULT_REQUEST)
 
-
-        # 5. Error_handler, 
-        # 치명적인 error 일 경우 시스템 리셋
-        # 그게 아닐 경우 자체 해결
-        _tmp_available_state = self.gate_state.get_available_count()
-        IFCtrl.error_handler.chk_err(IFCtrl)
-        if log_context != "[CON]":
-            print(log_context)
-            print(self)
-            print("------------SEQ_END------------")
+    def display_payment(self,IF_Cont):
+        IF_Cont.send_payload(util.COMM_FOR_STM32 ,self, util.CMD_DISPAY_PAYMENT_INFO)
 
     def clear(self):
-        self._state = util.JN_IDLE
-        self.gate_state.clear()
-        self.car_info.clear()
-        self.payload_cont.clear()
+        self.uart_payload = None
+        self.mqtt_payload = None
+
+
     def __str__(self):
         return f"--------CUR_SYS_CONTEXT-------\nSTATE = {self._state}  ENTRY_GATE = {self.gate_state.get_cur_direction()}  DETECTED_CAR = {self.gate_state.is_cur_detected_car()}"  
