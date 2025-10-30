@@ -1,6 +1,6 @@
 # from .gpio import GPIOModule
 # CLASS
-from .uart import UARTModule , calculate_checksum
+from .interface import IFCont,PayloadCont
+from .uart import UARTModule , calculate_checksum,last_payload
 from .mqtt import MqttModule
-from .interface import IFCont,PayloadCont,parse_received_data
 

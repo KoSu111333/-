@@ -34,9 +34,6 @@ def is_equal_payload(last_payload, cur_payload):
         return False
     
 def _parse_payload(msg_type: int, _payload_bytes: bytes) -> dict:
-    ety_gate_ctrl = globals.ety_gate_ctrl
-    exit_gate_ctrl = globals.exit_gate_ctrl
-
     parsed_payload = {"main_msg_type": msg_type} # UartMessageFrame_t의 msg_type
     
     status_str = "[STM32]"
@@ -50,26 +47,14 @@ def _parse_payload(msg_type: int, _payload_bytes: bytes) -> dict:
         status_type, status_gate_id, status_payload = struct.unpack(STATUS_PAYLOAD_FORMAT, _payload_bytes[:STATUS_PAYLOAD_SIZE])
         parsed_payload["status_type"] = hex(status_type)
         parsed_payload["gate_id"] = hex(status_gate_id)
-        if hex(status_gate_id) == util.TMP_ENTRY_GATE_ID:
-            sys_ctrl = ety_gate_ctrl
-        elif hex(status_gate_id) == util.TMP_EXIT_GATE_ID :
-            sys_ctrl = exit_gate_ctrl
-        else :
-            print("parsed Error Occured) UART_GATE_ID_ERROR")
-        #Get union data
         
         status_str += "[STATUS]"
         if status_type == util.STATUS_ERROR_CODE:
             # sys_ctrl.error_handler.set_error_code(msg_data["error_code"])
             print(status_payload)
-            sys_ctrl.set_cur_status(util.STATUS_ERROR_CODE)
-        else : 
-            print(f"Can't find status list state: {status_type}")
-            return False
 
     else:
         parsed_payload["error"] = "Unknown main message type for Payload Interpretation"
-    print(status_str)
 
     return parsed_payload
 
@@ -160,8 +145,6 @@ class UartMsgFrame():
         if not is_equal_payload(last_payload,parsed_payload) :#or True:
             self.if_cont.notify_uart_msg(parsed_payload,parsed_payload["gate_id"])
 
-        last_payload = parsed_payload
-
         time.sleep(0.1) # 1ms
 
         self._reset_parser_state() # 다음 메시지를 위해 상태 리셋
@@ -185,7 +168,7 @@ class UARTModule(threading.Thread):
         self.baudrate = baudrate
         self._running = True
         self._connect = False
-        self.if_cont = if_cont # 파싱된 메시지를 저장할 큐
+        # self.if_cont = if_cont # 파싱된 메시지를 저장할 큐
         self._msg_fr = UartMsgFrame(if_cont)
 
     def is_connected(self):

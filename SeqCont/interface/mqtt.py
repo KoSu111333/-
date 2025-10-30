@@ -12,12 +12,12 @@ class MqttModule:
     """
     MQTT 통신을 관리하는 클래스
     """
-    def __init__(self, bk_addr, bk_port, topics, client_id, queue):
+    def __init__(self, bk_addr, bk_port, topics, client_id, if_cont):
         self.addr = bk_addr
         self.port = bk_port
         self.topics = topics
         self.client_id = client_id
-        self.queue = queue
+        self.if_cont = if_cont
         self._is_connected = False
         self.mqtt_client = self._create_mqtt_client()
         self.mqtt_client.on_connect = self._on_connect
@@ -42,18 +42,23 @@ class MqttModule:
             if msg.topic == util.MQTT_TOPIC_RESPONSE_OCR:
                 payload = msg.payload.decode('utf-8')
                 parsed_data = json.loads(payload)
-                final_payload = util.pack_payload(dest = util.COMM_FOR_SERVER, topic = util.MQTT_TOPIC_RESPONSE_OCR \
-                , payload = parsed_data)
-
+                final_payload = util.pack_payload(topic = util.MQTT_TOPIC_RESPONSE_OCR, payload = parsed_data)
+                gate_id = parsed_data["gate_id"]
+                
             elif msg.topic == util.MQTT_TOPIC_RESPONSE_FEE_INFO:
                 payload = msg.payload.decode('utf-8')
                 parsed_data = json.loads(payload)
-                final_payload = util.pack_payload(dest = util.COMM_FOR_SERVER, topic = util.MQTT_TOPIC_RESPONSE_FEE_INFO \
-                , payload = parsed_data)
+                final_payload = util.pack_payload(topic = util.MQTT_TOPIC_RESPONSE_FEE_INFO, payload = parsed_data)
+                gate_id = 11
+            elif msg.topic == util.MQTT_TOPIC_RESPONSE_STARTUP:
+                payload = msg.payload.decode('utf-8')
+                parsed_data = json.loads(payload)
+                final_payload = util.pack_payload(topic = util.MQTT_TOPIC_RESPONSE_STARTUP, payload = parsed_data)
+                gate_id = parsed_data["gate_id"]
 
             else :
-                final_payload = util.pack_payload(dest = None, topic = None, payload = None)
-            self.queue.put(final_payload) 
+                final_payload = util.pack_payload(topic = None, payload = None)
+            self.if_cont.notify_mqtt_msg(final_payload,gate_id) 
         except Exception as e:
             #logger.exception(f"[MQTT] MQTT 메시지 처리 오류: {e}")
             print(f"[MQTT] MQTT 메시지 처리 오류: {e}")

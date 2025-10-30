@@ -11,7 +11,7 @@ TWO_GATE_MODE = False
 def initialize_system():
     interface_cont = globals.interface_cont
 
-    TOPIC_LIST = [util.MQTT_TOPIC_RESPONSE_OCR,util.MQTT_TOPIC_RESPONSE_FEE_INFO,util.MQTT_TOPIC_RESPONSE_FEE_RESULT,util.MQTT_TOPI]
+    TOPIC_LIST = [util.MQTT_TOPIC_RESPONSE_OCR,util.MQTT_TOPIC_RESPONSE_FEE_INFO,util.MQTT_TOPIC_RESPONSE_FEE_RESULT,util.MQTT_TOPIC_RESPONSE_STARTUP]
     # mqtt thread, uart thread start! -
     interface_cont.set_uart_setting(port = util.UART_PORT,baudrate = util.UART_BAUDRATE)
     interface_cont.set_mqtt_setting(bk_addr = util.MQTT_BROKER_ADDRESS,bk_port = util.MQTT_BROKER_PORT,topics = TOPIC_LIST,client_id = util.MQTT_CLIENT_ID)
@@ -44,15 +44,5 @@ def run():
     entry_t.join()
     exit_t.join()
 
-
-
-
 if __name__ == "__main__":
     run()
-    # while(True):
-    #     #if occured Exception, retry;
-    #     if (run()):
-    #         print("[SYS][POWER_OFF]")
-    #         break
-    #     print("[SYS][ERROR][RESTART]")
-    #     time.sleep(5)

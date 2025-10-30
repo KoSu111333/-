@@ -1,13 +1,12 @@
-TMP_ENTRY_GATE_ID                           = 10
-TMP_EXIT_GATE_ID                            = 11
+ENTRY_GATE_ID                           = 10
+EXIT_GATE_ID                            = 11
 
 COMM_FOR_SERVER                             = 0x90
 COMM_FOR_STM32                              = 0x91
 
 
 #3.CONSTANT - MQTT
-MQTT_BROKER_ADDRESS                         = "172.30.1.35"
-# MQTT_BROKER_ADDRESS                         = "220.86.83.94"  
+MQTT_BROKER_ADDRESS                         = ""
 MQTT_BROKER_PORT                            = 1883
 MQTT_CLIENT_ID                              = "MQTT-Receiver-Client"
 
@@ -33,6 +32,7 @@ UART_MAX_PAYLOAD_SIZE                       = 64
 MSG_TYPE_COMMAND                            = 0x01
 MSG_TYPE_STATUS                             = 0x02
 MSG_TYPE_RESPONSE                           = 0x03
+
 #3.CONSTANT - UART CMD TYPE
 CMD_GATE_OPEN                               = 0x10         
 CMD_GATE_CLOSE                              = 0x11       
@@ -42,6 +42,8 @@ CMD_DISPLAY_PAYMENT_FAIL                    = 0x14
 CMD_REQUEST_STM32_STATUS                    = 0x15
 CMD_RESET                                   = 0x16
 CMD_AVAILABLE_COUNT                         = 0x17
+CMD_GARAGE_FULL                             = 0x18
+# FOR SERVER CMD
 CMD_OCR_RESULT_REQUEST                      = 0x40
 CMD_PAYMENT_INFO_REUQEST                    = 0x41
 CMD_PAYMENT_RESULT                          = 0x42
@@ -83,7 +85,7 @@ UART_FRAME_HEADER_FORMAT = '<BBH B' # start1, start2, length, msg_type (5 bytes)
 UART_FRAME_FOOTER_FORMAT = '<H B'   # checksum, end_byte (3 bytes)
 
 GATE_CLOSE_TIME          = 5
-DEBUG_FLAG = False
+DEBUG_FLAG = True
 
 
 #ERROR CODE UART
