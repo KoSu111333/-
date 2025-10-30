@@ -80,7 +80,28 @@ class ErrorHandler:
         
     def get_error_code(self):
         return self.error_code
-    
+    def mqtt_re_connect(self):
+        IFCtrl.send_payload(util.COMM_FOR_SERVER,self,util.CMD_DISPLAY_ERROR_CODE)
+        count = 0
+        while(count < 10):
+            IFCtrl.send_payload(util.COMM_FOR_SERVER,self,util.CMD_STARTUP)
+            IFCtrl.wait_for_mqtt_msg(util.MQTT_TOPIC_RESPONSE_STARTUP,10)
+            count += 1  
+            if (IFCtrl.wait_for_mqtt_msg(util.MQTT_TOPIC_RESPONSE_STARTUP,10)):
+                return False
+        return True
+    def uart_re_connect(self):
+        IFCtrl.send_payload(util.COMM_FOR_SERVER,self,util.CMD_DISPLAY_ERROR_CODE)
+        count = 0
+        while(count < 10):
+            IFCtrl.send_payload(util.COMM_FOR_STM32,self,util.CMD_RESET)
+            IFCtrl.wait_for_mqtt_msg(util.STATUS_SYSTEM_CONNECT,10)
+            IF_Cont.send_payload(util.COMM_FOR_STM32 ,self, util.CMD_AVAILABLE_COUNT)
+            count += 1
+            if (IFCtrl.wait_for_mqtt_msg(util.STATUS_SYSTEM_IDLE,10)):
+                return False
+        return True
+
     def chk_error(self):
         if not self._error_flg :
             return False
@@ -88,40 +109,19 @@ class ErrorHandler:
         # uart 문제, 껏다가 다시 연결
         # mqtt 문제, 서버에 데이터 요청 했는데 response안 온 경우
         # 일단은 이렇게 세개 정도 ???
-        
-        ret = False
-        while(len(self._error_code)):
-            error_code = self._error_code.pop(0)
+        if error_flg:
+            error_code = self._error_code.pop()
+            print(f"[ERROR OCCURED][{error_code}]")
+
             # uart err
             if error_code >= 0x70 and error_code <= 0x80:
                 if error_code == 0x70 :
-                    # stm32 sys reset
-                    # stm32 only one reset but mqtt is three reset? 
-                    # payload = self.IFCtrl.uart_make_frame(util.MSG_TYPE_COMMAND,util.CMD_RESET,None)
-                    print("ERROR")
-                    IFCtrl.send_payload(util.COMM_FOR_STM32,self,util.CMD_RESET)
-                    IFCtrl.init_interface()
-                elif error_code == 0x81:
-                    
-                    pass
-                    # ret = retry(self.IFCtrl.init_interface())
-
-                elif error_code == 0x82:
-                    pass
-                    # ret = retry(self.IFCtrl.init_interface())
-            # mqtt err
+                    return self.uart_re_connect()
             elif error_code >= 0x80:
                 # mqtt connect error
-                pass
-                if error_code  == 0x81 :
-                    pass
-                    # ret = retry(self.IFCtrl.init_interface())
-            if ret : 
-                self.clear()
-            else :
-                # SYSTEM RESET
-                IFCtrl.send_payload(util.COMM_FOR_STM32,self,util.CMD_RESET)
-
+                if error_code  == 0x80 :
+                    return self.mqtt_re_connect()
+        return False
     def clear(self):
         self.error_code = ""
         self.error_flg = False
@@ -200,7 +200,6 @@ class IFCont:
                         print(f"[ERROR][{cur_gate_ctrl.prt_gate()}]: UART Status 대기 중 {timeout}초 타임아웃 발생.")
                         # connect error
                         error_handler.set_error_code(0x70)
-                        cur_gate_ctrl.current_uart_status = None
                         return False 
                 
             print(f"[INFO][{cur_gate_ctrl.prt_gate()}] : USART '{required_status}' 확인 완료.")
@@ -224,7 +223,7 @@ class IFCont:
                 if not is_notified and comp_topic != topic:
                     print(f"[ERROR][{cur_gate_ctrl.prt_gate()}]: Mqtt 대기 중 {timeout}초 타임아웃 발생.")
                     # connect error
-                    error_handler.set_error_code(0x81)
+                    error_handler.set_error_code(0x80)
                     return False # 타임아웃 발생 시 즉시 False 반환
                 
             # 3. 조건이 충족되어 while 루프를 빠져나온 경우
@@ -232,9 +231,6 @@ class IFCont:
 
             return True
             
-            
-    def set_error(self,error_code):
-        self.error_handler.set_error_code(error_code)
         
     def set_mqtt_setting(self, bk_addr, bk_port, topics, client_id):
         self.mqtt_ctrl = interface.MqttModule(
@@ -371,7 +367,10 @@ class IFCont:
                 if retry_cnt == 3:
                     print("ocr Fail!!")
 
-        
+                if not self.error_handler.chk_error():
+                    print("YOU SHOULD RE-BOOT")
+                    return
+
 
     def exit_gate_task(self):
         gate_ctrl = self.exit_gate_ctrl
@@ -395,6 +394,10 @@ class IFCont:
                         break
             if retry_cnt == 3:
                 print("ocr Fail!!")
+            if not self.error_handler.chk_error():
+                print("YOU SHOULD RE-BOOT")
+                return
+
     def stop_interface(self):
         print(f"STOP IF ")
         self.error_handler.clear()

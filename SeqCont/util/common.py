@@ -1,5 +1,5 @@
-ENTRY_GATE_ID                           = 10
-EXIT_GATE_ID                            = 11
+ENTRY_GATE_ID                               = 10
+EXIT_GATE_ID                                = 11
 
 COMM_FOR_SERVER                             = 0x90
 COMM_FOR_STM32                              = 0x91
