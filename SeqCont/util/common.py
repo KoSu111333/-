@@ -12,12 +12,12 @@ MQTT_CLIENT_ID                              = "MQTT-Receiver-Client"
 
 MQTT_TOPIC_REQUEST_OCR                      = "parking/request/ocr"
 MQTT_TOPIC_REQUEST_FEE_INFO                 = "parking/request/feeInfo"
-MQTT_TOPIC_REQUEST_STARTUP                 = "parking/request/startUp"
+MQTT_TOPIC_REQUEST_AVAILABLE_COUNT          = "parking/request/available_count"
 
 MQTT_TOPIC_RESPONSE_OCR                     = "parking/response/ocr"
 MQTT_TOPIC_RESPONSE_FEE_INFO                = "parking/response/feeInfo"
 MQTT_TOPIC_RESPONSE_FEE_RESULT              = "parking/response/feeResult"
-MQTT_TOPIC_RESPONSE_STARTUP                 = "parking/response/startUp"
+MQTT_TOPIC_RESPONSE_AVAILABLE_COUNT         = "parking/response/available_count"
 
 INIT_AVAILABLE_COUN = 10
 #3.CONSTANT - UART
@@ -48,7 +48,7 @@ CMD_OCR_RESULT_REQUEST                      = 0x40
 CMD_PAYMENT_INFO_REUQEST                    = 0x41
 CMD_PAYMENT_RESULT                          = 0x42
 CMD_DISPLAY_ERROR_CODE                      = 0x43
-CMD_STARTUP                                 = 0x44
+CMD_AVAILABLE_COUNT_REQUEST                 = 0x44
 
 #3.CONSTANT - UART STATUS TYPE
 STATUS_SYSTEM_CONNECT                       = 0x19# 시스템 대기 중
