@@ -25,13 +25,9 @@ class PayloadCont:
 
         # For server 
         if p_type == util.CMD_AVAILABLE_COUNT_REQUEST:
-<<<<<<< HEAD
             mqtt_payload = gate_ctrl.mqtt_payload["payload"]
 
             union_data = {"start_up" : mqtt_payload["start_up"],"gate_id" : gate_id}
-=======
-            union_data = {"gate_id" : gate_id}
->>>>>>> b5a897478f4e3f55660c81175e0974c95f087b74
         elif p_type ==  util.CMD_OCR_RESULT_REQUEST:
             license_plate_img = self.camera_module.capture_images()
             union_data = {"gate_id" : gate_id, "timestamp" :  timestamp ,"img": license_plate_img}
@@ -88,34 +84,19 @@ class ErrorHandler:
         
     def get_error_code(self):
         return self.error_code
-<<<<<<< HEAD
     def mqtt_re_connect(self,gate_ctrl):
         self.IFCtrl.send_payload(util.COMM_FOR_SERVER,gate_ctrl.IFCtrl,util.CMD_DISPLAY_ERROR_CODE)
         count = 0
         while(count < 10):
             self.IFCtrl.send_payload(util.COMM_FOR_SERVER,gate_ctrl.IFCtrl,util.CMD_AVAILABLE_COUNT_REQUEST)
-=======
-    def mqtt_re_connect(self):
-        self.IFCtrl.send_payload(util.COMM_FOR_SERVER,self,util.CMD_DISPLAY_ERROR_CODE)
-        count = 0
-        while(count < 10):
-            self.IFCtrl.send_payload(util.COMM_FOR_SERVER,self,util.CMD_AVAILABLE_COUNT_REQUEST)
->>>>>>> b5a897478f4e3f55660c81175e0974c95f087b74
             count += 1  
             if (self.IFCtrl.wait_for_mqtt_msg(util.MQTT_TOPIC_RESPONSE_AVAILABLE_COUNT,5)):
                 return True
         return False
-<<<<<<< HEAD
     def uart_re_connect(self,gate_ctrl):
         count = 0
         while(count < 10):
             self.IFCtrl.send_payload(util.COMM_FOR_STM32,gate_ctrl.IFCtrl,util.CMD_RESET)
-=======
-    def uart_re_connect(self):
-        count = 0
-        while(count < 10):
-            self.IFCtrl.send_payload(util.COMM_FOR_STM32,self,util.CMD_RESET)
->>>>>>> b5a897478f4e3f55660c81175e0974c95f087b74
             count += 1
             if (self.IFCtrl.wait_for_mqtt_msg(util.STATUS_SYSTEM_IDLE,5)):
                 return True
@@ -124,26 +105,15 @@ class ErrorHandler:
         union_data = {}
         union_data["error_code"] = error_code
         return {"cmd_type" : util.CMD_DISPLAY_ERROR_CODE ,"gate_id" : util.ENTRY_GATE_ID, "union_data" : union_data}
-<<<<<<< HEAD
     def chk_error(self,gate_ctrl):
         if not self._error_flg :
             return False
         while len(self._error_code) :
-=======
-    def chk_error(self):
-        if not self._error_flg :
-            return False
-        while self._error_code.size() :
->>>>>>> b5a897478f4e3f55660c81175e0974c95f087b74
             error_code = self._error_code[0]
             # uart err
             if error_code >= 0x70 and error_code <= 0x80:
                 if error_code == 0x70 :
-<<<<<<< HEAD
                     if self.uart_re_connect(gate_ctrl):
-=======
-                    if self.uart_re_connect():
->>>>>>> b5a897478f4e3f55660c81175e0974c95f087b74
                         self._error_code.pop()
                     else :
                         payload = self.IF_cont.uart_make_frame(util.MSG_TYPE_COMMAND,self.pack_dict(error_code))
@@ -152,11 +122,7 @@ class ErrorHandler:
             elif error_code >= 0x80:
                 # mqtt connect error
                 if error_code  == 0x80 :
-<<<<<<< HEAD
                     if self.mqtt_re_connect(gate_ctrl):
-=======
-                    if self.mqtt_re_connect():
->>>>>>> b5a897478f4e3f55660c81175e0974c95f087b74
                         self._error_code.pop()
                     else :
                         payload = self.IF_cont.uart_make_frame(util.MSG_TYPE_COMMAND,self.pack_dict(error_code))
@@ -181,15 +147,11 @@ class IFCont:
         
         self.payload_cont = PayloadCont()
         self.error_handler = ErrorHandler(self)
-<<<<<<< HEAD
     def start_up(self):
         if util.EXIT_GATE_MODE:
             return self.exit_gate_ctrl.start_up(self)
 
         return self.entry_gate_ctrl.start_up(self)
-=======
-        
->>>>>>> b5a897478f4e3f55660c81175e0974c95f087b74
     def which_gate(self,gate_id):
         if util.EXIT_GATE_MODE:
             return self.exit_gate_ctrl
@@ -207,25 +169,11 @@ class IFCont:
             if util.EXIT_GATE_MODE:
                 payload['gate_id'] = '0xb'
                 cur_gate_ctrl.uart_payload = payload
-<<<<<<< HEAD
             else :
                 cur_gate_ctrl.uart_payload = payload
             status_type = int(cur_gate_ctrl.uart_payload["status_type"],16)
             uart_cur_cond.notify_all()
             # print(f"[UART][{cur_gate_ctrl.prt_gate()}][UPADTAE] : {util.prt_cmd_str(status_type)}")
-=======
-                print(f"[UART][{cur_gate_ctrl.prt_gate()}][UPADTAE] : {util.prt_cmd_str(payload)}")
-
-    def notify_mqtt_msg(self,payload,gate_id):
-        cur_gate_ctrl = self.which_gate(gate_id)
-        mqtt_cur_cond = cur_gate_ctrl.get_cur_mqtt_cond()
-        with mqtt_cur_cond:
-            cur_gate_ctrl.mqtt_payload = payload
-            mqtt_cur_cond.notify_all()
-            if util.DEBUG_FLAG:
-                print(f"[MQTT][{cur_gate_ctrl.prt_gate()}][UPADTAE] : {payload}")
-
->>>>>>> b5a897478f4e3f55660c81175e0974c95f087b74
 
     def wait_for_uart_status(self, wish_status, gate_id, timeout=8) -> bool:
         cur_gate_ctrl = self.which_gate(gate_id)
@@ -245,14 +193,10 @@ class IFCont:
                     uart_cur_cond.wait()
                 else :    
                     is_notified = uart_cur_cond.wait(timeout) 
-<<<<<<< HEAD
                     if not is_notified and uart_payload != wish_status:
                         if wish_status == util.STATUS_VEHICLE_PASSED:
                             print(f"After Opning the gate, The Car Don't get inside")
                             return False
-=======
-                    if not is_notified and uart_payload != required_status:
->>>>>>> b5a897478f4e3f55660c81175e0974c95f087b74
                         print(f"[ERROR][{cur_gate_ctrl.prt_gate()}]: UART Status 대기 중 {timeout}초 타임아웃 발생.")
                         # connect error
                         self.error_handler.set_error_code(0x70)
@@ -280,7 +224,6 @@ class IFCont:
         comp_topic = ""
         with mqtt_cur_cond:
             while True:
-<<<<<<< HEAD
                 try:
                     comp_topic = cur_gate_ctrl.mqtt_payload["topic"]
                     if comp_topic == topic :
@@ -296,19 +239,6 @@ class IFCont:
                     print(f"{cur_gate_ctrl.mqtt_payload} : {e}")
                     time.sleep(1)
                     
-=======
-                comp_topic = cur_gate_ctrl.mqtt_payload["topic"]
-                is_notified = mqtt_cur_cond.wait(timeout) 
-                if comp_topic == topic :
-                    break
-                # 1. 타임아웃으로 인해 False를 반환한 경우
-                if not is_notified and comp_topic != topic:
-                    print(f"[ERROR][{cur_gate_ctrl.prt_gate()}]: Mqtt 대기 중 {timeout}초 타임아웃 발생.")
-                    # connect error
-                    self.error_handler.set_error_code(0x80)
-                    return False # 타임아웃 발생 시 즉시 False 반환
-                
->>>>>>> b5a897478f4e3f55660c81175e0974c95f087b74
             # 3. 조건이 충족되어 while 루프를 빠져나온 경우
             print(f"[INFO][{cur_gate_ctrl.prt_gate()}]: MQTT '{topic}' :  확인 완료.")
 
@@ -423,10 +353,6 @@ class IFCont:
         print("\n--- [SEQUENCE START: Entry Gate] ---")
         while True:
             retry_cnt = 0 
-<<<<<<< HEAD
-=======
-        
->>>>>>> b5a897478f4e3f55660c81175e0974c95f087b74
             if not self.wait_for_uart_status(util.STATUS_VEHICLE_DETECTED,gate_id) :
                 continue
             if gate_ctrl.is_garage_full():
@@ -452,11 +378,7 @@ class IFCont:
                 if retry_cnt == 3:
                     print("ocr Fail!!")
 
-<<<<<<< HEAD
                 if self.error_handler.chk_error(gate_ctrl):
-=======
-                if self.error_handler.chk_error():
->>>>>>> b5a897478f4e3f55660c81175e0974c95f087b74
                     print(f"ERROR OCCURED[{self.error_handler.get_error_code()}] : YOU SHOULD RE-BOOT")
 
 
@@ -469,11 +391,7 @@ class IFCont:
             if not self.wait_for_uart_status(util.STATUS_VEHICLE_DETECTED,gate_id):
                 continue            
             gate_ctrl.ocr_request(self)
-<<<<<<< HEAD
             if not self.wait_for_mqtt_msg(util.MQTT_TOPIC_RESPONSE_OCR,gate_id):
-=======
-            if (self.wait_for_mqtt_msg(util.MQTT_TOPIC_RESPONSE_OCR,gate_id)):
->>>>>>> b5a897478f4e3f55660c81175e0974c95f087b74
                 continue
             if gate_ctrl.is_ocr_ok():
                 gate_ctrl.payment_process(self)
@@ -489,11 +407,7 @@ class IFCont:
                         break
             if retry_cnt == 3:
                 print("ocr Fail!!")
-<<<<<<< HEAD
             if self.error_handler.chk_error(gate_ctrl):
-=======
-            if self.error_handler.chk_error():
->>>>>>> b5a897478f4e3f55660c81175e0974c95f087b74
                 print(f"ERROR OCCURED[{self.error_handler.get_error_code()}] : YOU SHOULD RE-BOOT")
 
     def stop_interface(self):
