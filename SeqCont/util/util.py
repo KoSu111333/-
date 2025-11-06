@@ -6,6 +6,23 @@ import threading
 def pack_payload(topic ,payload):
     return {"topic"      : topic,"payload"    : payload}
 
+# def ptr_cmd_str(cmd):
+#     if cmd == util.STATUS_SYSTEM_CONNECT :
+#         return "STATUS_SYSTEM_CONNECT"
+#     elif cmd == util.STATUS_SYSTEM_IDLE :
+#         return "STATUS_SYSTEM_IDLE"
+#     elif cmd == util.STATUS_VEHICLE_DETECTED :
+#         return "STATUS_VEHICLE_DETECTED"
+
+#     elif cmd == util.STATUS_GATE_OPEN :
+#     elif cmd == util.STATUS_GATE_CLOSED :
+#     elif cmd == util.STATUS_VEHICLE_LEFT :
+#     elif cmd == util.STATUS_DISPLAY_PAYMENT :
+#     elif cmd == util.STATUS_DISPLAY_PAYMENT_DONE :
+#     elif cmd == util.STATUS_DISPLAY_PAYMENT_FAIL :
+#     elif cmd == util.STATUS_VEHICLE_PASSED :
+#     elif cmd == util.STATUS_ERROR_CODE :
+
 class GateCtrl:
     def __init__(self,gate_id):
         # IDLE, READY, BUSY
@@ -59,11 +76,13 @@ class GateCtrl:
         # Server Init 
         # uart Init
         self.mqtt_payload = pack_payload(topic = util.MQTT_TOPIC_RESPONSE_STARTUP, payload = {"payload" : ""})
+
+        if self.gate_id() == util.ENTRY_GATE_ID:
+            IF_Cont.send_payload(util.COMM_FOR_SERVER ,self, util.CMD_STARTUP)
+            if not IF_Cont.wait_for_mqtt_msg(util.MQTT_TOPIC_RESPONSE_STARTUP,self.gate_id()):
+                return False
+            # uart Init
         IF_Cont.send_payload(util.COMM_FOR_STM32 ,self, util.CMD_RESET)
-        IF_Cont.send_payload(util.COMM_FOR_SERVER ,self, util.CMD_STARTUP)
-        if not IF_Cont.wait_for_mqtt_msg(util.MQTT_TOPIC_RESPONSE_STARTUP,self.gate_id()):
-            return False
-        # uart Init
         time.sleep(3)
 
         if not IF_Cont.wait_for_uart_status(util.STATUS_SYSTEM_CONNECT,self.gate_id()):

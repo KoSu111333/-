@@ -1,5 +1,5 @@
 #1.CLASS
-from .util import gateStatus,GateCtrl,pack_payload
+from .util import GateCtrl,pack_payload
 from .logging import CustomLogger,logging
 #2.FUNCTION
 #3.CONSTANT

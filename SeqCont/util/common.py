@@ -6,7 +6,7 @@ COMM_FOR_STM32                              = 0x91
 
 
 #3.CONSTANT - MQTT
-MQTT_BROKER_ADDRESS                         = ""
+MQTT_BROKER_ADDRESS                         = "3.34.40.114"
 MQTT_BROKER_PORT                            = 1883
 MQTT_CLIENT_ID                              = "MQTT-Receiver-Client"
 

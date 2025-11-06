@@ -7,7 +7,7 @@ TWO_GATE_MODE = False
 #logger = util.logging.getLogger("MyApp.main") 
 
 def initialize_system():
-   ety_gate_ctrl = util.GateCtrl(util.ENTRY_GATE_ID)
+    ety_gate_ctrl = util.GateCtrl(util.ENTRY_GATE_ID)
     exit_gate_ctrl = util.GateCtrl(util.EXIT_GATE_ID)
 
     interface_cont = interface.IFCont(ety_gate_ctrl,exit_gate_ctrl)

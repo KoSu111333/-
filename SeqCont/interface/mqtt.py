@@ -43,6 +43,7 @@ class MqttModule:
                 payload = msg.payload.decode('utf-8')
                 parsed_data = json.loads(payload)
                 final_payload = util.pack_payload(topic = util.MQTT_TOPIC_RESPONSE_OCR, payload = parsed_data)
+                print(final_payload)
                 gate_id = parsed_data["gate_id"]
                 
             elif msg.topic == util.MQTT_TOPIC_RESPONSE_FEE_INFO:
@@ -54,7 +55,7 @@ class MqttModule:
                 payload = msg.payload.decode('utf-8')
                 parsed_data = json.loads(payload)
                 final_payload = util.pack_payload(topic = util.MQTT_TOPIC_RESPONSE_STARTUP, payload = parsed_data)
-                gate_id = parsed_data["gate_id"]
+                gate_id = 10
 
             else :
                 final_payload = util.pack_payload(topic = None, payload = None)

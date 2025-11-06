@@ -182,7 +182,6 @@ class IFCont:
         status_type = ""
         with uart_cur_cond:
             # while 루프를 사용하여 조건을 확인하고 대기
-
             while True:        
                 uart_payload = cur_gate_ctrl.uart_payload
                 if cur_gate_ctrl.uart_payload is None:
@@ -199,7 +198,7 @@ class IFCont:
                     if not is_notified and uart_payload != required_status:
                         print(f"[ERROR][{cur_gate_ctrl.prt_gate()}]: UART Status 대기 중 {timeout}초 타임아웃 발생.")
                         # connect error
-                        error_handler.set_error_code(0x70)
+                        self.error_handler.set_error_code(0x70)
                         return False 
                 
             print(f"[INFO][{cur_gate_ctrl.prt_gate()}] : USART '{required_status}' 확인 완료.")
@@ -212,20 +211,23 @@ class IFCont:
         mqtt_cur_cond = cur_gate_ctrl.get_cur_mqtt_cond()
         print(f"[WAIT][{cur_gate_ctrl.prt_gate()}][MQTT_TOPIC] : {topic}")
         comp_topic = ""
+        print(cur_gate_ctrl.mqtt_payload)
         with mqtt_cur_cond:
             while True:
-                comp_topic = cur_gate_ctrl.mqtt_payload["topic"]
-                is_notified = mqtt_cur_cond.wait(timeout) 
-                if comp_topic == topic :
-                    break
+                try:
+                    comp_topic = cur_gate_ctrl.mqtt_payload["topic"]
+                    is_notified = mqtt_cur_cond.wait(timeout) 
+                    if comp_topic == topic:
+                        break
 
-                # 1. 타임아웃으로 인해 False를 반환한 경우
-                if not is_notified and comp_topic != topic:
-                    print(f"[ERROR][{cur_gate_ctrl.prt_gate()}]: Mqtt 대기 중 {timeout}초 타임아웃 발생.")
-                    # connect error
-                    error_handler.set_error_code(0x80)
-                    return False # 타임아웃 발생 시 즉시 False 반환
-                
+                    # 1. 타임아웃으로 인해 False를 반환한 경우
+                    if not is_notified and comp_topic != topic:
+                        print(f"[ERROR][{cur_gate_ctrl.prt_gate()}]: Mqtt 대기 중 {timeout}초 타임아웃 발생.")
+                        # connect error
+                        error_handler.set_error_code(0x80)
+                        return False # 타임아웃 발생 시 즉시 False 반환
+                except Exception as e:
+                    print(f"ERROR : {e}")
             # 3. 조건이 충족되어 while 루프를 빠져나온 경우
             print(f"[INFO][{cur_gate_ctrl.prt_gate()}]: MQTT '{topic}' 확인 완료.")
 
@@ -342,24 +344,29 @@ class IFCont:
         print("\n--- [SEQUENCE START: Entry Gate] ---")
         while True:
             retry_cnt = 0 
-            self.wait_for_uart_status(util.STATUS_VEHICLE_DETECTED,gate_id)        
+            if not self.wait_for_uart_status(util.STATUS_VEHICLE_DETECTED,gate_id):
+                continue
             if gate_ctrl.is_garage_full():
                 gate_ctrl.gate_full(self)
             else :
                 gate_ctrl.ocr_request(self)
-                self.wait_for_mqtt_msg(util.MQTT_TOPIC_RESPONSE_OCR,gate_id)
+                if not self.wait_for_mqtt_msg(util.MQTT_TOPIC_RESPONSE_OCR,gate_id):
+                    continue
                 if gate_ctrl.is_ocr_ok():
                     # 5. Uart로 게이트 OPEN 커맨드 전송
                     gate_ctrl.gate_open(self)
-                    self.wait_for_uart_status(util.STATUS_GATE_OPEN,gate_id)
-                    self.wait_for_uart_status(util.STATUS_VEHICLE_PASSED,gate_id)
+                    if not self.wait_for_uart_status(util.STATUS_GATE_OPEN,gate_id):
+                        continue
+                    if not self.wait_for_uart_status(util.STATUS_VEHICLE_PASSED,gate_id):
+                        continue
                     gate_ctrl.gate_close(self)           
                 else:
                     while retry_cnt < 3:
                         print(f"Retry[{retry_cnt}] : Proccessing...")
                         gate_ctrl.ocr_request(self)
                         retry_cnt += 1
-                        self.wait_for_mqtt_msg(util.MQTT_TOPIC_RESPONSE_OCR,gate_id)
+                        if not self.wait_for_mqtt_msg(util.MQTT_TOPIC_RESPONSE_OCR,gate_id):
+                            continue
                         if gate_ctrl.is_ocr_ok():
                             gate_ctrl.payment_process(self)
                             break
@@ -367,9 +374,9 @@ class IFCont:
                 if retry_cnt == 3:
                     print("ocr Fail!!")
 
-                if not self.error_handler.chk_error():
-                    print("YOU SHOULD RE-BOOT")
-                    return
+                # if not self.error_handler.chk_error():
+                #     print("YOU SHOULD RE-BOOT")
+                #     return
 
 
     def exit_gate_task(self):
@@ -394,9 +401,9 @@ class IFCont:
                         break
             if retry_cnt == 3:
                 print("ocr Fail!!")
-            if not self.error_handler.chk_error():
-                print("YOU SHOULD RE-BOOT")
-                return
+            # if not self.error_handler.chk_error():
+            #     print("YOU SHOULD RE-BOOT")
+            #     return
 
     def stop_interface(self):
         print(f"STOP IF ")

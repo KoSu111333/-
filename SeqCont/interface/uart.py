@@ -7,8 +7,6 @@ import util
 import threading
 import struct
 import time
-import globals 
-from collections import deque
 
 
 last_payload = None
