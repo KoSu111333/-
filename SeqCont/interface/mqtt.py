@@ -43,20 +43,20 @@ class MqttModule:
                 payload = msg.payload.decode('utf-8')
                 parsed_data = json.loads(payload)
                 final_payload = util.pack_payload(topic = util.MQTT_TOPIC_RESPONSE_OCR, payload = parsed_data)
-                print(final_payload)
                 gate_id = parsed_data["gate_id"]
                 
             elif msg.topic == util.MQTT_TOPIC_RESPONSE_FEE_INFO:
                 payload = msg.payload.decode('utf-8')
                 parsed_data = json.loads(payload)
                 final_payload = util.pack_payload(topic = util.MQTT_TOPIC_RESPONSE_FEE_INFO, payload = parsed_data)
-                gate_id = 11
-            elif msg.topic == util.MQTT_TOPIC_RESPONSE_STARTUP:
+                gate_id = util.EXIT_GATE_ID
+            elif msg.topic == util.MQTT_TOPIC_RESPONSE_AVAILABLE_COUNT:
                 payload = msg.payload.decode('utf-8')
                 parsed_data = json.loads(payload)
-                final_payload = util.pack_payload(topic = util.MQTT_TOPIC_RESPONSE_STARTUP, payload = parsed_data)
-                gate_id = 10
-
+                final_payload = util.pack_payload(topic = util.MQTT_TOPIC_RESPONSE_AVAILABLE_COUNT, payload = parsed_data)
+                gate_id = util.ENTRY_GATE_ID
+                if util.EXIT_GATE_MODE:
+                    gate_id = util.EXIT_GATE_ID
             else :
                 final_payload = util.pack_payload(topic = None, payload = None)
             self.if_cont.notify_mqtt_msg(final_payload,gate_id) 

@@ -52,13 +52,16 @@ class cameraModule:
             print("카메라가 준비되지 않았습니다.")
             return False
         ret, frame = self.cap.read()
-        encoded_string = None
         if ret:               
             # 2. 이미지를 Base64로 인코딩하여 리스트에 추가
             is_success, buffer = cv2.imencode(".jpg", frame)
             if is_success:
                 encoded_string = base64.b64encode(buffer).decode("utf-8")
                 # print(f"  - {i+1}번째 이미지 인코딩 완료.")
+            else:
+                print(f"Error: {i+1}번째 이미지 인코딩 실패.")
+        else:
+            print(f"Error: {i+1}번째 이미지 캡처 실패.")
         # 연속 촬영 시 약간의 딜레이 추가
         time.sleep(0.5)
 

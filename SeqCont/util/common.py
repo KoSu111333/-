@@ -6,18 +6,18 @@ COMM_FOR_STM32                              = 0x91
 
 
 #3.CONSTANT - MQTT
-MQTT_BROKER_ADDRESS                         = "3.34.40.114"
+MQTT_BROKER_ADDRESS                         = "172.30.1.85"
 MQTT_BROKER_PORT                            = 1883
 MQTT_CLIENT_ID                              = "MQTT-Receiver-Client"
 
 MQTT_TOPIC_REQUEST_OCR                      = "parking/request/ocr"
 MQTT_TOPIC_REQUEST_FEE_INFO                 = "parking/request/feeInfo"
-MQTT_TOPIC_REQUEST_STARTUP                 = "parking/request/startUp"
+MQTT_TOPIC_REQUEST_AVAILABLE_COUNT          = "parking/request/available_count"
 
 MQTT_TOPIC_RESPONSE_OCR                     = "parking/response/ocr"
 MQTT_TOPIC_RESPONSE_FEE_INFO                = "parking/response/feeInfo"
 MQTT_TOPIC_RESPONSE_FEE_RESULT              = "parking/response/feeResult"
-MQTT_TOPIC_RESPONSE_STARTUP                 = "parking/response/startUp"
+MQTT_TOPIC_RESPONSE_AVAILABLE_COUNT         = "parking/response/available_count"
 
 INIT_AVAILABLE_COUN = 10
 #3.CONSTANT - UART
@@ -48,7 +48,7 @@ CMD_OCR_RESULT_REQUEST                      = 0x40
 CMD_PAYMENT_INFO_REUQEST                    = 0x41
 CMD_PAYMENT_RESULT                          = 0x42
 CMD_DISPLAY_ERROR_CODE                      = 0x43
-CMD_STARTUP                                 = 0x44
+CMD_AVAILABLE_COUNT_REQUEST                 = 0x44
 
 #3.CONSTANT - UART STATUS TYPE
 STATUS_SYSTEM_CONNECT                       = 0x19# 시스템 대기 중
@@ -85,7 +85,7 @@ UART_FRAME_HEADER_FORMAT = '<BBH B' # start1, start2, length, msg_type (5 bytes)
 UART_FRAME_FOOTER_FORMAT = '<H B'   # checksum, end_byte (3 bytes)
 
 GATE_CLOSE_TIME          = 5
-DEBUG_FLAG = True
+DEBUG_FLAG = False
 
 
 #ERROR CODE UART
@@ -94,3 +94,5 @@ ERROR_UART_CONNECT = 0x70
 INIT_AVAILABLE_COUNT = 10
 #ERROR CODE MQTT
 ERROR_MQTT_CONNECT = 0x80
+ 
+EXIT_GATE_MODE = True
